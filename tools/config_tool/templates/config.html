@@ -1,0 +1,198 @@
+<style>
+    .form-input {
+        display: block; width: 100%; padding: 0.75rem; font-size: 0.875rem;
+        line-height: 1.25rem; color: #111827; background-color: #fff;
+        border: 1px solid #d1d5db; border-radius: 0.375rem;
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    }
+    .form-input:focus {
+        border-color: #da291c; outline: 2px solid transparent; outline-offset: 2px;
+        box-shadow: 0 0 0 2px #fecaca;
+    }
+</style>
+
+<h3 class="text-gray-700 text-3xl font-medium">Configuration</h3>
+
+<form id="config-form" class="mt-4 space-y-8">
+    <!-- Proxmox Settings -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h4 class="text-lg font-semibold text-gray-800 border-b pb-2">Proxmox API Settings</h4>
+        <div id="api-status-message" class="mt-4" style="display: none;"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <div>
+                <label for="proxmox_host" class="block text-sm font-medium text-gray-700">Host / IP Address</label>
+                <input type="text" name="PROXMOX_HOST" id="proxmox_host" class="form-input mt-1" value="{{ config.PROXMOX_HOST or '' }}" required>
+            </div>
+            <div>
+                <label for="proxmox_user" class="block text-sm font-medium text-gray-700">User (e.g., root@pam)</label>
+                <input type="text" name="PROXMOX_USER" id="proxmox_user" class="form-input mt-1" value="{{ config.PROXMOX_USER or '' }}" required>
+            </div>
+            <div>
+                <label for="proxmox_token_name" class="block text-sm font-medium text-gray-700">API Token Name</label>
+                <input type="text" name="PROXMOX_TOKEN_NAME" id="proxmox_token_name" class="form-input mt-1" value="{{ config.PROXMOX_TOKEN_NAME or '' }}" placeholder="e.g., myapitoken" required>
+            </div>
+            <div>
+                <label for="proxmox_token_value" class="block text-sm font-medium text-gray-700">API Token Secret</label>
+                <input type="password" name="PROXMOX_TOKEN_VALUE" id="proxmox_token_value" class="form-input mt-1" value="{{ config.PROXMOX_TOKEN_VALUE or '' }}" placeholder="xxxxxxxx-xxxx-xxxx-xxxx-xxxxxxxxxxxx" required>
+            </div>
+            <div class="md:col-span-2">
+                <label for="proxmox_verify_ssl" class="block text-sm font-medium text-gray-700">Verify SSL Certificate</label>
+                <select name="PROXMOX_VERIFY_SSL" id="proxmox_verify_ssl" class="form-input mt-1">
+                    <option value="true" {% if config.PROXMOX_VERIFY_SSL == 'true' %}selected{% endif %}>Yes</option>
+                    <option value="false" {% if config.PROXMOX_VERIFY_SSL == 'false' %}selected{% endif %}>No (for self-signed certificates)</option>
+                </select>
+            </div>
+        </div>
+        <div class="mt-6">
+            <button type="button" id="test-api-btn" class="w-full md:w-auto flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#307FE2] hover:bg-blue-700">Test API Verbinding</button>
+        </div>
+    </div>
+
+    <!-- SSH Settings -->
+    <div class="bg-white p-6 rounded-lg shadow-md">
+        <h4 class="text-lg font-semibold text-gray-800 border-b pb-2">SSH Settings</h4>
+        <div id="ssh-status-message" class="mt-4" style="display: none;"></div>
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+            <div>
+                <label for="ssh_port" class="block text-sm font-medium text-gray-700">Port</label>
+                <input type="number" name="SSH_PORT" id="ssh_port" class="form-input mt-1" value="{{ config.SSH_PORT or '22' }}" required>
+            </div>
+            <div>
+                <label for="ssh_username" class="block text-sm font-medium text-gray-700">Username</label>
+                <input type="text" name="SSH_USERNAME" id="ssh_username" class="form-input mt-1" value="{{ config.SSH_USERNAME or '' }}" required>
+            </div>
+            <div class="md:col-span-2">
+                <label for="ssh_auth_method" class="block text-sm font-medium text-gray-700">Authentication Method</label>
+                <select name="SSH_AUTH_METHOD" id="ssh_auth_method" class="form-input mt-1">
+                    <option value="password" {% if config.SSH_AUTH_METHOD == 'password' %}selected{% endif %}>Password</option>
+                    <option value="key" {% if config.SSH_AUTH_METHOD == 'key' %}selected{% endif %}>Private Key</option>
+                </select>
+            </div>
+            
+            <div id="ssh-password-fields" class="md:col-span-2">
+                <label for="ssh_password" class="block text-sm font-medium text-gray-700">SSH Password</label>
+                <input type="password" name="SSH_PASSWORD" id="ssh_password" class="form-input mt-1" value="{{ config.SSH_PASSWORD or '' }}">
+            </div>
+
+            <div id="ssh-key-fields" class="md:col-span-2 space-y-4" style="display: none;">
+                 <div>
+                    <label for="ssh_private_key_path" class="block text-sm font-medium text-gray-700">Path to Private Key</label>
+                    <input type="text" name="SSH_PRIVATE_KEY_PATH" id="ssh_private_key_path" class="form-input mt-1" value="{{ config.SSH_PRIVATE_KEY_PATH or '' }}" placeholder="/Users/youruser/.ssh/id_rsa">
+                </div>
+                 <div>
+                    <label for="ssh_private_key_password" class="block text-sm font-medium text-gray-700">Private Key Password (optional)</label>
+                    <input type="password" name="SSH_PRIVATE_KEY_PASSWORD" id="ssh_private_key_password" class="form-input mt-1">
+                </div>
+            </div>
+        </div>
+        <div class="mt-6">
+            <button type="button" id="test-ssh-btn" class="w-full md:w-auto flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#307FE2] hover:bg-blue-700">Test SSH Verbinding</button>
+        </div>
+    </div>
+    
+    <div id="save-status-message" class="my-4" style="display: none;"></div>
+    
+    <div class="mt-8">
+        <button type="submit" id="save-config-btn" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-[#3cb17e] hover:bg-green-700">
+            Configuratie Opslaan
+        </button>
+    </div>
+</form>
+
+<script>
+(() => {
+    const configPage = document.getElementById('main-content');
+    if (!configPage) return;
+
+    const authMethodSelect = configPage.querySelector('#ssh_auth_method');
+    const passwordFields = configPage.querySelector('#ssh-password-fields');
+    const keyFields = configPage.querySelector('#ssh-key-fields');
+    const configForm = configPage.querySelector('#config-form');
+    
+    const apiStatusDiv = configPage.querySelector('#api-status-message');
+    const sshStatusDiv = configPage.querySelector('#ssh-status-message');
+    const saveStatusDiv = configPage.querySelector('#save-status-message');
+    
+    const testApiBtn = configPage.querySelector('#test-api-btn');
+    const testSshBtn = configPage.querySelector('#test-ssh-btn');
+    const saveButton = configPage.querySelector('#save-config-btn');
+
+    function toggleAuthFields() {
+        if (authMethodSelect.value === 'key') {
+            passwordFields.style.display = 'none';
+            keyFields.style.display = 'block';
+        } else {
+            passwordFields.style.display = 'block';
+            keyFields.style.display = 'none';
+        }
+    }
+
+    function showStatusMessage(div, isSuccess, message) {
+        let bgColor, textColor, svgIcon, title;
+        if (isSuccess) {
+            bgColor = 'bg-green-50'; textColor = 'text-green-800'; title = 'Succes';
+            svgIcon = `<svg class="h-5 w-5 text-[#3cb17e]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zm3.707-9.293a1 1 0 00-1.414-1.414L9 10.586 7.707 9.293a1 1 0 00-1.414 1.414l2 2a1 1 0 001.414 0l4-4z" clip-rule="evenodd" /></svg>`;
+        } else {
+            bgColor = 'bg-red-50'; textColor = 'text-red-800'; title = 'Fout';
+            svgIcon = `<svg class="h-5 w-5 text-[#da291c]" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg>`;
+        }
+        div.innerHTML = `<div class="rounded-md ${bgColor} p-4"><div class="flex"><div class="flex-shrink-0">${svgIcon}</div><div class="ml-3"><h3 class="text-sm font-medium ${textColor}">${title}</h3><p class="mt-1 text-sm ${textColor.replace('800', '700')}">${message}</p></div></div></div>`;
+        div.style.display = 'block';
+    }
+
+    async function handleTest(button, url, statusDiv) {
+        statusDiv.style.display = 'none';
+        const originalText = button.innerText;
+        button.disabled = true;
+        button.innerHTML = 'Testen...';
+
+        const formData = new FormData(configForm);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+            const response = await fetch(url, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            showStatusMessage(statusDiv, result.success, result.message);
+        } catch (error) {
+            showStatusMessage(statusDiv, false, `Kon de test niet uitvoeren: ${error.message}`);
+        }
+        button.disabled = false;
+        button.innerText = originalText;
+    }
+
+    testApiBtn.addEventListener('click', () => handleTest(testApiBtn, "{{ url_for('config_tool.test_api_config_route') }}", apiStatusDiv));
+    testSshBtn.addEventListener('click', () => handleTest(testSshBtn, "{{ url_for('config_tool.test_ssh_config_route') }}", sshStatusDiv));
+
+    configForm.addEventListener('submit', async (e) => {
+        e.preventDefault();
+        saveStatusDiv.style.display = 'none';
+        const originalText = saveButton.innerText;
+        saveButton.disabled = true;
+        saveButton.innerHTML = 'Opslaan...';
+
+        const formData = new FormData(configForm);
+        const data = Object.fromEntries(formData.entries());
+
+        try {
+            const response = await fetch("{{ url_for('config_tool.save_config_route') }}", {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(data)
+            });
+            const result = await response.json();
+            if (!result.success) throw new Error(result.error);
+            showStatusMessage(saveStatusDiv, true, result.message);
+        } catch (error) {
+            showStatusMessage(saveStatusDiv, false, `Kon de configuratie niet opslaan: ${error.message}`);
+        }
+        saveButton.disabled = false;
+        saveButton.innerText = originalText;
+    });
+
+    toggleAuthFields();
+})();
+</script>

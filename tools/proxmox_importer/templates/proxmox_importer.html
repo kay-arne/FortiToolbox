@@ -1,0 +1,413 @@
+<style>
+    .form-input {
+        display: block; width: 100%; padding: 0.75rem; font-size: 0.875rem;
+        line-height: 1.25rem; color: #111827; background-color: #fff;
+        border: 1px solid #d1d5db; border-radius: 0.375rem;
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    }
+    .form-input:focus {
+        border-color: #da291c; outline: 2px solid transparent; outline-offset: 2px;
+        box-shadow: 0 0 0 2px #fecaca;
+    }
+</style>
+
+<h3 class="text-gray-700 text-3xl font-medium">Proxmox VM Importer</h3>
+<p class="mt-4 text-gray-600">
+    Import VMs by uploading a .zip file containing .qcow2 disk images. Configure resources, networking, and additional disks.
+</p>
+                    
+<div id="status-message" class="mt-4" style="display: none;"></div>
+
+<!-- Step 1: Upload -->
+<div id="upload-phase" class="mt-4 bg-white p-6 rounded-lg shadow-md">
+    <h4 class="text-lg font-semibold text-gray-800 border-b pb-2">Step 1: Upload ZIP File</h4>
+    <form id="upload-zip-form" class="mt-4" enctype="multipart/form-data">
+        <div>
+            <label for="zipfile" class="block text-sm font-medium text-gray-700">Select .zip file</label>
+            <div class="mt-1">
+                <input type="file" id="zipfile" name="zipfile" 
+                       class="form-input p-0 block w-full text-sm text-gray-700
+                              file:mr-4 file:py-3 file:px-4 file:rounded-l-md
+                              file:border-0 file:text-sm file:font-semibold
+                              file:bg-red-50 file:text-red-700 hover:file:bg-red-100"
+                       accept=".zip" required>
+            </div>
+            <p class="mt-2 text-xs text-gray-500">Upload a ZIP file containing one or more .qcow2 disk images.</p>
+        </div>
+        <div class="mt-6">
+            <button type="submit" id="upload-zip-button" class="w-full flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#da291c] hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">Upload and Analyze</button>
+        </div>
+        <!-- New Progress Bar Element -->
+        <div class="mt-4 w-full bg-gray-200 rounded-full h-2.5 dark:bg-gray-700" style="display: none;" id="upload-progress-container">
+            <div id="upload-progress-bar" class="bg-blue-600 h-2.5 rounded-full" style="width: 0%"></div>
+        </div>
+    </form>
+</div>
+
+<!-- Step 2: Configure -->
+<div id="disk-config-phase" class="mt-4" style="display: none;">
+    <form id="configure-vm-form">
+        <div class="bg-white p-6 rounded-lg shadow-md">
+            <h4 class="text-lg font-semibold text-gray-800 border-b pb-2">Step 2: Configure VM & Disks</h4>
+            
+            <div class="mt-6">
+                <h5 class="text-md font-medium text-gray-700">VM Details & Location</h5>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mt-4">
+                    <div>
+                        <label for="vm_name" class="block text-sm font-medium text-gray-700">VM Name</label>
+                        <input type="text" name="vm_name" id="vm_name" class="form-input mt-1" pattern="[a-zA-Z0-9-]+" title="Only letters, numbers, and dashes." required>
+                    </div>
+                    <div>
+                        <label for="vm_id" class="block text-sm font-medium text-gray-700">VM ID</label>
+                        <input type="text" name="vm_id" id="vm_id" class="form-input mt-1" pattern="[0-9]+" title="Only numbers." required>
+                        <p class="mt-2 text-xs text-gray-500" id="used-vm-ids-info"><strong>In use:</strong> {{ used_vm_ids | join(', ') }}</p>
+                    </div>
+                    <div>
+                        <label for="proxmox_node" class="block text-sm font-medium text-gray-700">Host (Node)</label>
+                        <select name="proxmox_node" id="proxmox_node" class="form-input mt-1" required>
+                            <option value="" disabled selected>-- Select a node --</option>
+                            {% for node in nodes %}<option value="{{ node }}">{{ node }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="proxmox_storage" class="block text-sm font-medium text-gray-700">Storage Location</label>
+                        <select name="proxmox_storage" id="proxmox_storage" class="form-input mt-1" required>
+                            <option value="" disabled selected>-- Select storage --</option>
+                            {% for storage in storage_locations %}<option value="{{ storage }}">{{ storage }}</option>{% endfor %}
+                        </select>
+                    </div>
+                    <div>
+                        <label for="cores" class="block text-sm font-medium text-gray-700">CPU Cores</label>
+                        <input type="number" name="cores" id="cores" value="2" min="1" class="form-input mt-1" required>
+                    </div>
+                    <div>
+                        <label for="memory" class="block text-sm font-medium text-gray-700">Memory (MB)</label>
+                        <input type="number" name="memory" id="memory" value="2048" min="512" step="512" class="form-input mt-1" required>
+                    </div>
+                    <div class="md:col-span-2">
+                        <label for="ostype" class="block text-sm font-medium text-gray-700">Operating System</label>
+                        <select name="ostype" id="ostype" class="form-input mt-1" required>
+                            <option value="l26" selected>Linux</option>
+                            <option value="win11">Windows</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-6 pt-6 border-t">
+                <h5 class="text-md font-medium text-gray-700">Network Adapters</h5>
+                <div id="network-adapters-container" class="mt-4 space-y-4"></div>
+                <button type="button" id="add-net-adapter-btn" class="mt-2 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-[#da291c] hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">Add Adapter</button>
+            </div>
+
+            <div class="mt-6 pt-6 border-t">
+                <h5 class="text-md font-medium text-gray-700">Uploaded Disks</h5>
+                <div class="overflow-x-auto mt-4">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50"><tr><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">File</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">SCSI Address</th><th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Boot Disk</th></tr></thead>
+                        <tbody id="qcow-table-body" class="bg-white divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <div class="mt-6 pt-6 border-t">
+                <h5 class="text-md font-medium text-gray-700">Additional Disks</h5>
+                <div id="additional-disks-container" class="mt-4 space-y-4"></div>
+                <button type="button" id="add-disk-btn" class="mt-2 inline-flex items-center px-3 py-2 border border-transparent text-sm leading-4 font-medium rounded-md shadow-sm text-white bg-[#da291c] hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">Add Additional Disk</button>
+            </div>
+
+            <div class="mt-8">
+                <button type="submit" id="finalize-import-button" class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-[#3cb17e] hover:bg-green-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-green-500">Start VM Creation & Import</button>
+            </div>
+        </div>
+    </form>
+</div>
+
+<div id="log-container-wrapper" class="mt-4" style="display: none;">
+     <div class="bg-gray-900 p-6 rounded-lg shadow-md">
+        <h4 class="text-lg font-semibold text-white">Import Log</h4>
+        <!-- CHANGE: The 'whitespace-pre-wrap' class was added here -->
+        <div id="log-container" class="mt-4 bg-gray-800 text-white font-mono text-xs p-4 rounded-md h-64 overflow-y-auto whitespace-pre-wrap"></div>
+    </div>
+</div>
+
+<script>
+    (() => {
+        const importerPage = document.getElementById('main-content');
+        if (!importerPage) return;
+
+        const uploadPhase = importerPage.querySelector('#upload-phase');
+        const diskConfigPhase = importerPage.querySelector('#disk-config-phase');
+        const uploadZipForm = importerPage.querySelector('#upload-zip-form');
+        const configureVmForm = importerPage.querySelector('#configure-vm-form');
+        const qcowTableBody = importerPage.querySelector('#qcow-table-body');
+        const proxmoxNodeSelect = importerPage.querySelector('#proxmox_node');
+        const statusMessageDiv = importerPage.querySelector('#status-message');
+        const logContainerWrapper = importerPage.querySelector('#log-container-wrapper');
+        const logContainer = importerPage.querySelector('#log-container');
+        const uploadZipButton = importerPage.querySelector('#upload-zip-button');
+        const finalizeImportButton = importerPage.querySelector('#finalize-import-button');
+        const addNetAdapterBtn = importerPage.querySelector('#add-net-adapter-btn');
+        const addDiskBtn = importerPage.querySelector('#add-disk-btn');
+        const networkAdaptersContainer = importerPage.querySelector('#network-adapters-container');
+        const additionalDisksContainer = importerPage.querySelector('#additional-disks-container');
+
+        let currentSessionId = sessionStorage.getItem('proxmoxImporterSessionId');
+        let networkBridgesCache = [];
+        let usedScsiPorts = new Set();
+
+        proxmoxNodeSelect.addEventListener('change', fetchNetworkBridges);
+        addNetAdapterBtn.addEventListener('click', addNetworkAdapter);
+        addDiskBtn.addEventListener('click', addAdditionalDisk);
+        networkAdaptersContainer.addEventListener('click', handleRemoveClick);
+        additionalDisksContainer.addEventListener('click', handleRemoveClick);
+        uploadZipForm.addEventListener('submit', handleUploadSubmit);
+        configureVmForm.addEventListener('submit', handleConfigureSubmit);
+        
+        if (currentSessionId) {
+            logContainerWrapper.style.display = 'block';
+            logContainer.innerHTML = "Session restored. You can continue or start a new import.\n";
+        }
+
+        async function fetchNetworkBridges() {
+            const selectedNode = proxmoxNodeSelect.value;
+            if (!selectedNode) {
+                networkBridgesCache = [];
+                updateAllBridgeSelects();
+                return;
+            }
+            try {
+                const response = await fetch(`/get-network-bridges/${selectedNode}`);
+                if (!response.ok) throw new Error('Network response was not ok.');
+                networkBridgesCache = await response.json();
+            } catch (error) {
+                console.error('Error fetching network bridges:', error);
+                networkBridgesCache = [];
+            }
+            updateAllBridgeSelects();
+        }
+
+        function updateAllBridgeSelects() {
+            importerPage.querySelectorAll('.network-bridge-select').forEach(select => {
+                const currentVal = select.value;
+                select.innerHTML = '<option value="" disabled selected>-- Select bridge --</option>';
+                if (networkBridgesCache.length > 0) {
+                    networkBridgesCache.forEach(bridge => select.add(new Option(bridge, bridge)));
+                    select.value = currentVal;
+                }
+            });
+        }
+
+        function addNetworkAdapter() {
+            const index = networkAdaptersContainer.children.length;
+            const row = document.createElement('div');
+            row.className = 'grid grid-cols-1 md:grid-cols-6 gap-4 items-center';
+            row.innerHTML = `
+                <div class="md:col-span-3">
+                    <label class="text-sm font-medium text-gray-700">Network Bridge (net${index})</label>
+                    <select class="network-bridge-select form-input mt-1" required></select>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="text-sm font-medium text-gray-700">VLAN ID</label>
+                    <input type="number" class="vlan-id-input form-input mt-1" placeholder="Optional">
+                </div>
+                <div class="md:col-span-1 self-end">
+                    <button type="button" class="remove-btn w-full mt-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700" data-remove="net-adapter">X</button>
+                </div>
+            `;
+            networkAdaptersContainer.appendChild(row);
+            updateAllBridgeSelects();
+        }
+        
+        function addAdditionalDisk() {
+            const row = document.createElement('div');
+            row.className = 'grid grid-cols-1 md:grid-cols-6 gap-4 items-center';
+            row.innerHTML = `
+                <div class="md:col-span-3">
+                    <label class="text-sm font-medium text-gray-700">Size (GB)</label>
+                    <input type="number" class="disk-size-input form-input mt-1" value="10" min="1" required>
+                </div>
+                <div class="md:col-span-2">
+                    <label class="text-sm font-medium text-gray-700">SCSI Address</label>
+                    <select class="scsi-port-select form-input mt-1" required></select>
+                </div>
+                <div class="md:col-span-1 self-end">
+                    <button type="button" class="remove-btn w-full mt-1 inline-flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-red-600 hover:bg-red-700" data-remove="disk">X</button>
+                </div>
+            `;
+            additionalDisksContainer.appendChild(row);
+            updateAvailableScsiPorts();
+        }
+
+        function handleRemoveClick(e) {
+            if (e.target.dataset.remove) {
+                e.target.closest('.grid').remove();
+                if (e.target.dataset.remove === 'disk') {
+                    updateAvailableScsiPorts();
+                }
+            }
+        }
+        
+        function updateAvailableScsiPorts() {
+            usedScsiPorts.clear();
+            importerPage.querySelectorAll('.uploaded-disk-scsi, .scsi-port-select').forEach(select => {
+                if (select.value) usedScsiPorts.add(select.value);
+            });
+
+            importerPage.querySelectorAll('.scsi-port-select').forEach(currentSelect => {
+                const selectedValue = currentSelect.value;
+                currentSelect.innerHTML = '<option value="" disabled selected>-- Select port --</option>';
+                for (let i = 0; i < 16; i++) {
+                    const port = `scsi${i}`;
+                    if (!usedScsiPorts.has(port) || port === selectedValue) {
+                        currentSelect.add(new Option(port, port));
+                    }
+                }
+                currentSelect.value = selectedValue;
+            });
+        }
+
+        function handleUploadSubmit(e) {
+            e.preventDefault();
+            const uploadProgressContainer = importerPage.querySelector('#upload-progress-container');
+            const uploadProgressBar = importerPage.querySelector('#upload-progress-bar');
+            
+            uploadZipButton.disabled = true;
+            uploadZipButton.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Uploading...`;
+            uploadProgressContainer.style.display = 'block';
+            uploadProgressBar.style.width = '0%';
+
+            const formData = new FormData(uploadZipForm);
+            const xhr = new XMLHttpRequest();
+
+            xhr.open('POST', "{{ url_for('proxmox_vm_importer.upload_and_extract_zip') }}", true);
+
+            xhr.upload.onprogress = function(event) {
+                if (event.lengthComputable) {
+                    const percentComplete = (event.loaded / event.total) * 100;
+                    uploadProgressBar.style.width = percentComplete + '%';
+                }
+            };
+
+            xhr.upload.onload = function() {
+                uploadZipButton.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Processing file...`;
+            };
+
+            xhr.onload = function() {
+                try {
+                    if (xhr.status === 200) {
+                        const result = JSON.parse(xhr.responseText);
+                        if (!result.success) {
+                            throw new Error(result.error);
+                        }
+                        
+                        currentSessionId = result.session_id;
+                        sessionStorage.setItem('proxmoxImporterSessionId', currentSessionId);
+                        
+                        qcowTableBody.innerHTML = '';
+                        usedScsiPorts.clear();
+                        result.qcow_files.forEach((filename, index) => {
+                            const row = document.createElement('tr');
+                            const scsiPort = `scsi${index}`;
+                            row.innerHTML = `
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${filename}</td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <select class="uploaded-disk-scsi form-input" disabled><option>${scsiPort}</option></select>
+                                </td>
+                                <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">
+                                    <input type="radio" name="boot_disk" value="${scsiPort}" ${index === 0 ? 'checked' : ''} class="focus:ring-orange-500 h-4 w-4 text-orange-600 border-gray-300">
+                                </td>
+                            `;
+                            qcowTableBody.appendChild(row);
+                            usedScsiPorts.add(scsiPort);
+                        });
+
+                        const usedVmIdsText = importerPage.querySelector('#used-vm-ids-info').innerText;
+                        const usedVmIds = usedVmIdsText.match(/\d+/g) || [];
+                        importerPage.querySelector('#vm_id').value = usedVmIds.length > 0 ? Math.max(...usedVmIds.map(Number)) + 1 : 100;
+
+                        addNetworkAdapter();
+                        updateAvailableScsiPorts();
+                        uploadPhase.style.display = 'none';
+                        diskConfigPhase.style.display = 'block';
+                        logContainerWrapper.style.display = 'block';
+                        logContainer.innerHTML = ''; // Clear log on successful upload
+
+                    } else {
+                        throw new Error(`Server responded with status: ${xhr.status}`);
+                    }
+                } catch (error) {
+                    statusMessageDiv.innerHTML = `<div class="rounded-md bg-red-50 p-4"><div class="flex"><div class="flex-shrink-0"><svg class="h-5 w-5 text-red-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor"><path fill-rule="evenodd" d="M10 18a8 8 0 100-16 8 8 0 000 16zM8.707 7.293a1 1 0 00-1.414 1.414L8.586 10l-1.293 1.293a1 1 0 101.414 1.414L10 11.414l1.293 1.293a1 1 0 001.414-1.414L11.414 10l1.293-1.293a1 1 0 00-1.414-1.414L10 8.586 8.707 7.293z" clip-rule="evenodd" /></svg></div><div class="ml-3"><h3 class="text-sm font-medium text-red-800">Error</h3><div class="mt-2 text-sm text-red-700"><p>${error.message}</p></div></div></div></div>`;
+                    statusMessageDiv.style.display = 'block';
+                }
+            };
+            
+            xhr.onerror = function() {
+                statusMessageDiv.innerHTML = `<div class="rounded-md bg-red-50 p-4">...</div>`; // Error message
+                statusMessageDiv.style.display = 'block';
+            };
+            
+            xhr.onloadend = function() {
+                uploadZipButton.disabled = false;
+                uploadZipButton.innerHTML = 'Upload and Analyze';
+                uploadProgressContainer.style.display = 'none';
+            };
+
+            xhr.send(formData);
+        }
+
+        async function handleConfigureSubmit(e) {
+            e.preventDefault();
+            finalizeImportButton.disabled = true;
+            finalizeImportButton.innerText = 'Importing...';
+            statusMessageDiv.style.display = 'none';
+            logContainer.innerHTML = '';
+
+            if (!currentSessionId) {
+                statusMessageDiv.innerHTML = `<div class="rounded-md bg-red-50 p-4">...</div>`; // Error message
+                statusMessageDiv.style.display = 'block';
+                finalizeImportButton.disabled = false;
+                return;
+            }
+
+            const vmData = Object.fromEntries(new FormData(configureVmForm).entries());
+            vmData.session_id = currentSessionId;
+            vmData.uploaded_disks = Array.from(qcowTableBody.rows).map(r => ({ filename: r.cells[0].innerText, scsi_id: r.querySelector('select').value, is_boot: r.querySelector('input[type="radio"]').checked }));
+            vmData.network_adapters = Array.from(networkAdaptersContainer.children).map((r, i) => ({ interface_id: i, bridge: r.querySelector('.network-bridge-select').value, vlan: r.querySelector('.vlan-id-input').value || null }));
+            vmData.additional_disks = Array.from(additionalDisksContainer.children).map(r => ({ size: r.querySelector('.disk-size-input').value, scsi_id: r.querySelector('.scsi-port-select').value }));
+
+            const eventSource = new EventSource(`/progress/${currentSessionId}`);
+            eventSource.onmessage = (event) => {
+                logContainer.innerHTML += event.data + '\n';
+                logContainer.scrollTop = logContainer.scrollHeight;
+                if (event.data.includes("✅ Import completed successfully!")) {
+                    eventSource.close();
+                    finalizeImportButton.disabled = false;
+                    finalizeImportButton.innerText = 'Start New Import';
+                    sessionStorage.removeItem('proxmoxImporterSessionId');
+                    currentSessionId = null;
+                } else if (event.data.includes("❌")) {
+                    eventSource.close();
+                    finalizeImportButton.disabled = false;
+                    finalizeImportButton.innerText = 'Start VM Creation & Import';
+                }
+            };
+            eventSource.onerror = () => {
+                logContainer.innerHTML += '\n❌ Error receiving progress updates. The connection may have been lost.\n';
+                eventSource.close();
+                finalizeImportButton.disabled = false;
+            };
+
+            try {
+                const response = await fetch("{{ url_for('proxmox_vm_importer.finalize_vm_import') }}", { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(vmData) });
+                const result = await response.json();
+                if (!response.ok) throw new Error(result.error || 'Unknown error during finalization.');
+            } catch (error) {
+                statusMessageDiv.innerHTML = `<div class="rounded-md bg-red-50 p-4">...</div>`; // Error message
+                statusMessageDiv.style.display = 'block';
+                finalizeImportButton.disabled = false;
+                eventSource.close();
+            }
+        }
+    })();
+</script>

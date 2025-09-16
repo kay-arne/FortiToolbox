@@ -1,0 +1,130 @@
+[
+    {
+        "command": "get system status",
+        "description": "Displays general system information, including firmware version, serial number, and uptime."
+    },
+    {
+        "command": "get system performance status",
+        "description": "Shows real-time CPU and memory usage."
+    },
+    {
+        "command": "get system session list",
+        "description": "Displays the firewall's active session table."
+    },
+    {
+        "command": "get router info routing-table all",
+        "description": "Shows the complete routing table of the FortiGate."
+    },
+    {
+        "command": "get vpn ipsec tunnel details",
+        "description": "Displays detailed status information of all IPsec VPN tunnels."
+    },
+    {
+        "command": "get firewall policy <id>",
+        "description": "Shows the configuration of a specific firewall policy."
+    },
+    {
+        "command": "get system interface",
+        "description": "Lists all network interfaces and their current configuration."
+    },
+    {
+        "command": "diagnose debug crashlog read",
+        "description": "Reads the most recent system crash logs."
+    },
+    {
+        "command": "diagnose hardware deviceinfo nic <interface>",
+        "description": "Shows detailed hardware information for a specific network interface."
+    },
+    {
+        "command": "diagnose sniffer packet <interface> '<filter>' 4 0 l",
+        "description": "Starts a packet capture on an interface with a specific filter, showing full packet details."
+    },
+    {
+        "command": "diagnose debug flow filter <filter>",
+        "description": "Filters the debug flow output based on an address, port, etc. (e.g., 'addr 1.1.1.1')."
+    },
+    {
+        "command": "diagnose debug flow show function-name enable",
+        "description": "Shows the function names in the debug flow output for better analysis."
+    },
+    {
+        "command": "diagnose debug flow trace start <count>",
+        "description": "Starts a trace of the packet flow through the system for a number of packets."
+    },
+    {
+        "command": "diagnose debug enable",
+        "description": "Enables debug output."
+    },
+    {
+        "command": "diagnose debug disable",
+        "description": "Disables debug output."
+    },
+    {
+        "command": "diagnose vpn ike log filter name <tunnel_name>",
+        "description": "Filters IKE logs for a specific IPsec VPN tunnel."
+    },
+    {
+        "command": "diagnose sys top <delay> <lines>",
+        "description": "Displays real-time process information, similar to 'top' in Linux."
+    },
+    {
+        "command": "diagnose firewall ippool list",
+        "description": "Lists all configured IP pools and their usage."
+    },
+    {
+        "command": "diagnose ip arp list",
+        "description": "Displays the system's ARP table."
+    },
+    {
+        "command": "diagnose netlink interface list",
+        "description": "Shows a list of kernel network interfaces."
+    },
+    {
+        "command": "execute ping <destination>",
+        "description": "Performs a standard ping test to a host or IP address."
+    },
+    {
+        "command": "execute traceroute <destination>",
+        "description": "Performs a traceroute to follow the path to a destination."
+    },
+    {
+        "command": "execute reboot",
+        "description": "Reboots the FortiGate device."
+    },
+    {
+        "command": "execute shutdown",
+        "description": "Shuts down the FortiGate device."
+    },
+    {
+        "command": "execute backup config usb <filename>",
+        "description": "Backs up the system configuration to a connected USB drive."
+    },
+    {
+        "command": "execute restore config usb <filename>",
+        "description": "Restores the system configuration from a connected USB drive."
+    },
+    {
+        "command": "execute update-now",
+        "description": "Forces an immediate update check for FortiGuard services."
+    },
+    {
+        "command": "config system global",
+        "description": "Enter global configuration mode."
+    },
+    {
+        "command": "config firewall policy",
+        "description": "Enter firewall policy configuration mode."
+    },
+    {
+        "command": "config vpn ipsec phase1-interface",
+        "description": "Enter IPsec VPN phase 1 configuration mode."
+    },
+    {
+        "command": "show full-configuration",
+        "description": "Displays the entire running configuration, including default values."
+    },
+    {
+        "command": "fnsysctl ifconfig <interface>",
+        "description": "Low-level command to view interface configuration, similar to 'ifconfig' in Linux."
+    }
+]

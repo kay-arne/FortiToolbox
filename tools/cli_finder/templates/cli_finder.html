@@ -1,0 +1,94 @@
+<style>
+    .form-input {
+        display: block; width: 100%; padding: 0.75rem; font-size: 0.875rem;
+        line-height: 1.25rem; color: #111827; background-color: #fff;
+        border: 1px solid #d1d5db; border-radius: 0.375rem;
+        box-shadow: 0 1px 2px 0 rgb(0 0 0 / 0.05);
+    }
+    .form-input:focus {
+        border-color: #da291c; outline: 2px solid transparent; outline-offset: 2px;
+        box-shadow: 0 0 0 2px #fecaca;
+    }
+    .command-card mark {
+        background-color: #fef3c7; /* yellow-200 */
+        color: inherit;
+        padding: 1px 2px;
+        border-radius: 2px;
+    }
+
+    #command-search {
+        padding-left: 2.5rem; /* 40px, gelijk aan Tailwind's pl-10 */
+    }
+</style>
+
+<h3 class="text-gray-700 text-3xl font-medium">CLI Command Finder</h3>
+<p class="mt-4 text-gray-600">
+    Zoek snel en eenvoudig naar FortiOS CLI-commando's. De resultaten worden live gefilterd terwijl u typt.
+</p>
+
+<!-- Zoekveld -->
+<div class="mt-8">
+    <label for="command-search" class="block text-sm font-medium text-gray-700">Zoek op commando of omschrijving</label>
+    <div class="mt-1 relative">
+        <div class="pointer-events-none absolute inset-y-0 left-0 pl-3 flex items-center">
+            <svg class="h-5 w-5 text-gray-400" xmlns="http://www.w3.org/2000/svg" viewBox="0 0 20 20" fill="currentColor" aria-hidden="true">
+                <path fill-rule="evenodd" d="M8 4a4 4 0 100 8 4 4 0 000-8zM2 8a6 6 0 1110.89 3.476l4.817 4.817a1 1 0 01-1.414 1.414l-4.816-4.816A6 6 0 012 8z" clip-rule="evenodd" />
+            </svg>
+        </div>
+        <input type="text" id="command-search" class="form-input block w-full" placeholder="Typ minimaal 3 tekens...">
+    </div>
+</div>
+
+<!-- Resultaten Container -->
+<div id="results-container" class="mt-6 space-y-3">
+    <!-- Resultaten worden hier dynamisch ingevoegd -->
+</div>
+
+<script>
+(() => {
+    const searchInput = document.getElementById('command-search');
+    const resultsContainer = document.getElementById('results-container');
+    
+    // --- DE FIX ---
+    // We parsen de JSON-string expliciet. De '|safe' filter is cruciaal
+    // om te voorkomen dat Jinja2 de aanhalingstekens in de JSON omzet.
+    var commands = JSON.parse('{{ commands|tojson|safe }}');
+    // --- EINDE FIX ---
+
+    function highlight(text, query) {
+        if (!query) return text;
+        const regex = new RegExp(`(${query.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')})`, 'gi');
+        return text.replace(regex, '<mark>$1</mark>');
+    }
+
+    function renderResults(filteredCommands, query) {
+        if (filteredCommands.length === 0) {
+            resultsContainer.innerHTML = '<p class="text-gray-500 text-center">Geen resultaten gevonden.</p>';
+            return;
+        }
+
+        resultsContainer.innerHTML = filteredCommands.map(cmd => `
+            <div class="bg-white p-4 rounded-lg shadow command-card">
+                <p class="font-mono text-sm text-red-600 font-semibold">${highlight(cmd.command, query)}</p>
+                <p class="mt-2 text-sm text-gray-600">${highlight(cmd.description, query)}</p>
+            </div>
+        `).join('');
+    }
+
+    searchInput.addEventListener('input', () => {
+        const query = searchInput.value.trim().toLowerCase();
+
+        if (query.length < 3) {
+            resultsContainer.innerHTML = '';
+            return;
+        }
+
+        const filtered = commands.filter(cmd => 
+            cmd.command.toLowerCase().includes(query) || 
+            cmd.description.toLowerCase().includes(query)
+        );
+
+        renderResults(filtered, query);
+    });
+})();
+</script>

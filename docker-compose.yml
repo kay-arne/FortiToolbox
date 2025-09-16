@@ -1,0 +1,14 @@
+version: '3.8'
+
+services:
+  fortitoolbox:
+    build: .
+    container_name: fortitoolbox
+    ports:
+      - "5001:5001"
+    env_file:
+      - .env
+    volumes:
+      - ./temp_uploads:/app/temp_uploads
+      - ./tools/cli_finder:/app/tools/cli_finder
+    restart: unless-stopped
