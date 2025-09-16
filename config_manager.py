@@ -41,8 +41,7 @@ def load_config():
 
 def save_config(data):
     """
-    Saves only non-sensitive data to config.ini.
-    Sensitive data should be managed as environment variables.
+    Saves the given data to config.ini.
     """
     config = configparser.ConfigParser(interpolation=None)
     
@@ -57,14 +56,12 @@ def save_config(data):
         config['SCRAPER'] = {}
 
     for key, value in data.items():
-        # Only save values that are NOT sensitive.
-        if key.upper() not in SENSITIVE_KEYS:
-            if key.startswith('PROXMOX_'):
-                config['PROXMOX'][key.replace('PROXMOX_', '').lower()] = value or ''
-            elif key.startswith('SSH_'):
-                config['SSH'][key.replace('SSH_', '').lower()] = value or ''
-            elif key.startswith('SCRAPER_'):
-                config['SCRAPER'][key.replace('SCRAPER_', '').lower()] = value or ''
+        if key.startswith('PROXMOX_'):
+            config['PROXMOX'][key.replace('PROXMOX_', '').lower()] = value or ''
+        elif key.startswith('SSH_'):
+            config['SSH'][key.replace('SSH_', '').lower()] = value or ''
+        elif key.startswith('SCRAPER_'):
+            config['SCRAPER'][key.replace('SCRAPER_', '').lower()] = value or ''
 
     with open(CONFIG_PATH, 'w') as configfile:
         config.write(configfile)
