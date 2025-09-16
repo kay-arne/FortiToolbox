@@ -21,9 +21,17 @@ This is the easiest way to get the application running.
     cd FortiToolbox
     ```
 
-2.  **Configure Environment (Optional but Recommended):**
-    You can pre-configure the application by creating a `.env` file. This is useful so you don't have to enter credentials in the UI every time you restart the container. Create a file named `.env` in the project root:
+2.  **Create `.env` File:**
+    You **must** create a file named `.env` in the project root to set the application's secret key. You can also add your Proxmox and SSH credentials here for convenience, but they can also be added later through the web interface.
+
+    Create the `.env` file with the following content:
     ```env
+    # This is REQUIRED for session security
+    FLASK_SECRET_KEY='a_very_long_and_random_secret_string_please_change_me'
+
+    # --- Optional Convenience Variables ---
+    # If you do not set these, you can configure them on the app's Configuration page.
+    
     # Proxmox API Configuration
     PROXMOX_HOST=your_proxmox_ip
     PROXMOX_USER=root@pam
@@ -36,7 +44,6 @@ This is the easiest way to get the application running.
     SSH_PASSWORD=your_ssh_password # if using password auth
     SSH_PRIVATE_KEY_PATH=/path/to/your/private/key # if using key auth
     ```
-    *If you do not create a `.env` file, you will need to enter your credentials on the application's `Configuration` page after starting it.*
 
 3.  **Build and Run with Docker Compose:**
     ```bash
