@@ -3,69 +3,258 @@
     Gebruik deze tool om de meest recente FortiOS CLI-commando's direct van de Fortinet-documentatie te downloaden. De "CLI Command Finder" wordt hiermee automatisch bijgewerkt.
 </p>
 
-<div class="mt-8 bg-white p-6 rounded-lg shadow-md">
-    <div id="scraper-controls">
-        <p class="text-sm text-gray-800">Klik op de knop hieronder om het proces te starten. Dit kan enkele seconden duren.</p>
-        <div class="mt-6">
-            <button type="button" id="start-scraper-btn" class="w-full md:w-auto flex justify-center py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white bg-[#da291c] hover:bg-red-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-red-500">
-                Start Scraper
+<div class="p-6 bg-white border border-gray-200 rounded-lg shadow dark:bg-gray-800 dark:border-gray-700">
+    <h5 class="mb-2 text-2xl font-bold tracking-tight text-gray-900 dark:text-white">FortiGate CLI Scraper</h5>
+    <p class="mb-3 font-normal text-gray-700 dark:text-gray-400">
+        This tool scrapes the official FortiGate CLI reference documentation to build a complete, local database for the CLI Finder tool.
+        This process can take several minutes.
+    </p>
+
+    <!-- Base URL Input -->
+    <div class="mb-4">
+        <label for="base-url" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Documentation URL</label>
+        <input type="text" id="base-url" class="bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block w-full p-2.5 dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500" value="https://docs.fortinet.com/document/fortigate/7.6.4/cli-reference/84566/fortios-cli-reference" required>
+    </div>
+
+    <!-- Category Selection -->
+    <div class="mb-4">
+        <label for="category" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Select Command Category</label>
+        <div class="flex space-x-2">
+            <button id="fetch-config-btn" data-category="configuration" class="category-btn inline-flex items-center px-4 py-2 text-sm font-medium text-center text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700">
+                Configuration
+            </button>
+            <button id="fetch-diagnose-btn" data-category="diagnose" class="category-btn inline-flex items-center px-4 py-2 text-sm font-medium text-center text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700">
+                Diagnose
+            </button>
+            <button id="fetch-execute-btn" data-category="execute" class="category-btn inline-flex items-center px-4 py-2 text-sm font-medium text-center text-gray-900 bg-white border border-gray-300 rounded-lg hover:bg-gray-100 focus:ring-4 focus:outline-none focus:ring-gray-200 dark:bg-gray-800 dark:text-white dark:border-gray-600 dark:hover:bg-gray-700 dark:hover:border-gray-600 dark:focus:ring-gray-700">
+                Execute
             </button>
         </div>
     </div>
-
-    <div id="scraper-log-wrapper" class="mt-4" style="display: none;">
-         <div class="bg-gray-900 p-6 rounded-lg shadow-inner">
-            <h4 class="text-lg font-semibold text-white">Scraper Log</h4>
-            <div id="scraper-log-container" class="mt-4 bg-gray-800 text-white font-mono text-xs p-4 rounded-md h-64 overflow-y-auto whitespace-pre-wrap"></div>
+    
+    <!-- Command Selection Table -->
+    <div id="command-selection-container" class="hidden mt-4">
+        <div class="flex justify-between items-center mb-2">
+            <h6 class="text-xl font-bold tracking-tight text-gray-900 dark:text-white">Available Commands</h6>
+            <div class="flex items-center">
+                <input id="checkbox-all" type="checkbox" class="w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600">
+                <label for="checkbox-all" class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300">Select All</label>
+            </div>
         </div>
+        <div id="command-grid" class="p-4 bg-gray-50 dark:bg-gray-900 border border-gray-200 dark:border-gray-700 rounded-lg shadow-inner h-96 overflow-y-auto grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            <!-- Commands will be inserted here by JavaScript -->
+        </div>
+    </div>
+
+    <div class="flex items-center mt-4 space-x-2">
+        <button id="run-scraper-btn" type="button" class="inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-blue-700 rounded-lg hover:bg-blue-800 focus:ring-4 focus:outline-none focus:ring-blue-300 dark:bg-blue-600 dark:hover:bg-blue-700 dark:focus:ring-blue-800">
+            <svg id="run-spinner" class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" style="display: none;" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+            </svg>
+            Update Command Database
+        </button>
+        <button id="stop-scraper-btn" type="button" class="hidden inline-flex items-center px-4 py-2 text-sm font-medium text-center text-white bg-red-700 rounded-lg hover:bg-red-800 focus:ring-4 focus:outline-none focus:ring-red-300 dark:bg-red-600 dark:hover:bg-red-700 dark:focus:ring-red-800">
+            Stop
+        </button>
+        <div id="progress-counter" class="text-sm font-medium text-gray-700 dark:text-gray-300"></div>
+    </div>
+
+    <!-- Log Viewer -->
+    <div class="mt-4">
+        <label for="scraper-logs" class="block mb-2 text-sm font-medium text-gray-900 dark:text-white">Logs</label>
+        <div id="scraper-logs" class="w-full h-96 p-2.5 bg-gray-50 border border-gray-300 text-gray-900 text-sm rounded-lg focus:ring-blue-500 focus:border-blue-500 block dark:bg-gray-700 dark:border-gray-600 dark:placeholder-gray-400 dark:text-white dark:focus:ring-blue-500 dark:focus:border-blue-500 overflow-y-auto font-mono"></div>
     </div>
 </div>
 
 <script>
-(() => {
-    const startBtn = document.getElementById('start-scraper-btn');
-    const logWrapper = document.getElementById('scraper-log-wrapper');
-    const logContainer = document.getElementById('scraper-log-container');
+function initScraper() {
+    const runScraperBtn = document.getElementById('run-scraper-btn');
+    const baseUrlInput = document.getElementById('base-url');
+    const categoryButtons = document.querySelectorAll('.category-btn');
+    const commandSelectionContainer = document.getElementById('command-selection-container');
+    const commandGrid = document.getElementById('command-grid');
+    const selectAllCheckbox = document.getElementById('checkbox-all');
+    const stopScraperBtn = document.getElementById('stop-scraper-btn');
+    const progressCounter = document.getElementById('progress-counter');
 
-    startBtn.addEventListener('click', async () => {
-        startBtn.disabled = true;
-        startBtn.innerHTML = `<svg class="animate-spin -ml-1 mr-3 h-5 w-5 text-white" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24"><circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle><path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path></svg> Scrapen...`;
-        
-        logWrapper.style.display = 'block';
-        logContainer.innerHTML = 'Proces gestart...\n';
+    if (!runScraperBtn) return;
+
+    const runSpinner = document.getElementById('run-spinner');
+    const logContainer = document.getElementById('scraper-logs');
+    let eventSource;
+    let currentSessionId;
+
+    function logMessage(message) {
+        const sanitizedMessage = message.replace(/</g, "&lt;").replace(/>/g, "&gt;");
+        logContainer.innerHTML += `<div>${sanitizedMessage}</div>`;
+        logContainer.scrollTop = logContainer.scrollHeight;
+    }
+
+    categoryButtons.forEach(button => {
+        button.addEventListener('click', async () => {
+            const category = button.dataset.category;
+            const baseUrl = baseUrlInput.value;
+            logMessage(`🔎 Fetching commands for category: ${category}...`);
+            commandSelectionContainer.classList.remove('hidden');
+            commandGrid.innerHTML = '<div class="text-center p-4 col-span-full">Loading...</div>';
+
+            try {
+                const response = await fetch('/scraper/fetch-commands', {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ base_url: baseUrl, category: category })
+                });
+                const data = await response.json();
+
+                if (data.error) {
+                    logMessage(`❌ Error: ${data.error}`);
+                    commandGrid.innerHTML = `<div class="text-center p-4 col-span-full text-red-500">${data.error}</div>`;
+                } else if (data.commands && data.commands.length > 0) {
+                    renderCommandGrid(data.commands);
+                    logMessage(`✅ Found ${data.commands.length} commands for category '${category}'.`);
+                } else {
+                    commandGrid.innerHTML = `<div class="text-center p-4 col-span-full">No commands found for this category.</div>`;
+                    logMessage(`🟡 No commands found for category '${category}'.`);
+                }
+            } catch (error) {
+                logMessage(`❌ Network or server error while fetching commands: ${error}`);
+                commandGrid.innerHTML = `<div class="text-center p-4 col-span-full text-red-500">Failed to fetch commands. Check logs.</div>`;
+            }
+        });
+    });
+
+    function renderCommandGrid(commands) {
+        commandGrid.innerHTML = '';
+        commands.forEach(commandInfo => {
+            const item = document.createElement('div');
+            item.className = 'flex items-center p-2 rounded hover:bg-gray-100 dark:hover:bg-gray-800';
+            item.innerHTML = `
+                <input type="checkbox" class="command-checkbox w-4 h-4 text-blue-600 bg-gray-100 border-gray-300 rounded focus:ring-blue-500 dark:focus:ring-blue-600 dark:ring-offset-gray-800 focus:ring-2 dark:bg-gray-700 dark:border-gray-600" data-url="${commandInfo.url}" value="${commandInfo.command}">
+                <label class="ml-2 text-sm font-medium text-gray-900 dark:text-gray-300 truncate" title="${commandInfo.command}">${commandInfo.command}</label>
+            `;
+            commandGrid.appendChild(item);
+        });
+    }
+    
+    selectAllCheckbox.addEventListener('change', (e) => {
+        const checkboxes = commandGrid.querySelectorAll('.command-checkbox');
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = e.target.checked;
+        });
+    });
+
+    runScraperBtn.addEventListener('click', async () => {
+        runScraperBtn.disabled = true;
+        stopScraperBtn.classList.remove('hidden');
+        runSpinner.style.display = 'inline-block';
+        logContainer.innerHTML = '';
+        progressCounter.textContent = '';
+        logMessage('🚀 Starting scraper... This may take several minutes.');
+
+        // Get selected commands and send to backend
+        const selectedCommands = [];
+        const checkboxes = commandGrid.querySelectorAll('.command-checkbox:checked');
+        checkboxes.forEach(checkbox => {
+            selectedCommands.push({
+                command: checkbox.value,
+                url: checkbox.dataset.url
+            });
+        });
+
+        if (selectedCommands.length === 0) {
+            logMessage('⚠️ Please select at least one command to import.');
+            resetControls();
+            return;
+        }
+
+        logMessage(` Importing ${selectedCommands.length} commands...`);
 
         try {
-            const response = await fetch("{{ url_for('scraper.run_scraper') }}", { method: 'POST' });
-            const result = await response.json();
+            const response = await fetch('/scraper/run', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ commands: selectedCommands }) // Sending selected commands with URLs
+            });
+            const data = await response.json();
 
-            if (result.success) {
-                const eventSource = new EventSource(`/scraper/progress/${result.session_id}`);
-                
-                eventSource.onmessage = (event) => {
-                    logContainer.innerHTML += event.data + '\n';
-                    logContainer.scrollTop = logContainer.scrollHeight;
-
-                    if (event.data.includes("✅") || event.data.includes("❌")) {
-                        eventSource.close();
-                        startBtn.disabled = false;
-                        startBtn.innerText = 'Start Scraper Opnieuw';
-                    }
-                };
-
-                eventSource.onerror = () => {
-                    logContainer.innerHTML += '❌ Fout bij het ontvangen van updates. Verbinding verbroken.\n';
-                    eventSource.close();
-                    startBtn.disabled = false;
-                    startBtn.innerText = 'Probeer Opnieuw';
-                };
+            if (data.success) {
+                currentSessionId = data.session_id;
+                listenForProgress(data.session_id);
             } else {
-                throw new Error("Kon het scraper-proces niet starten.");
+                logMessage(`❌ Error starting scraper: ${data.error}`);
+                resetControls();
             }
         } catch (error) {
-            logContainer.innerHTML += `❌ Kritieke fout: ${error.message}\n`;
-            startBtn.disabled = false;
-            startBtn.innerText = 'Probeer Opnieuw';
+            logMessage(`❌ Network or server error: ${error}`);
+            resetControls();
         }
     });
-})();
+
+    stopScraperBtn.addEventListener('click', async () => {
+        if (!currentSessionId) {
+            logMessage("No active scraping process to stop.");
+            return;
+        }
+        logMessage("🛑 Sending stop request...");
+        try {
+            await fetch('/scraper/stop', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({ session_id: currentSessionId })
+            });
+            logMessage("🛑 Stop request sent. Waiting for process to terminate...");
+            stopScraperBtn.disabled = true;
+        } catch (error) {
+            logMessage(`❌ Error sending stop signal: ${error}`);
+        }
+    });
+
+    function listenForProgress(sessionId) {
+        eventSource = new EventSource(`/scraper/progress/${sessionId}`);
+        eventSource.onmessage = function(event) {
+            let messageData;
+            try {
+                messageData = JSON.parse(event.data);
+            } catch (e) {
+                // Not a JSON message, log as plain text
+                logMessage(event.data);
+                if (event.data.includes('✅ Scraper completed successfully!') || event.data.includes('❌')) {
+                    eventSource.close();
+                    resetControls();
+                }
+                return;
+            }
+
+            // It's a JSON message, handle progress and log
+            if (messageData.progress !== undefined && messageData.total) {
+                progressCounter.textContent = `${messageData.progress} / ${messageData.total}`;
+            }
+            if (messageData.message) {
+                logMessage(messageData.message);
+            }
+            
+            if (messageData.status === 'finished' || messageData.status === 'error' || messageData.status === 'cancelled') {
+                eventSource.close();
+                resetControls();
+            }
+        };
+        eventSource.onerror = function() {
+            logMessage('🛑 Connection to server lost. Please try again.');
+            eventSource.close();
+            resetControls();
+        };
+    }
+    
+    function resetControls() {
+        runSpinner.style.display = 'none';
+        runScraperBtn.disabled = false;
+        stopScraperBtn.classList.add('hidden');
+        stopScraperBtn.disabled = false;
+        currentSessionId = null;
+        progressCounter.textContent = '';
+    }
+}
+
+initScraper();
 </script>
