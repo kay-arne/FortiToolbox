@@ -27,9 +27,6 @@ def load_config():
         if 'SSH' in config:
             for key in config['SSH']:
                 settings[f"SSH_{key.upper()}"] = config.get('SSH', key)
-        if 'SCRAPER' in config:
-            for key in config['SCRAPER']:
-                settings[f"SCRAPER_{key.upper()}"] = config.get('SCRAPER', key)
 
     # 2. Override with environment variables if present
     for key in SENSITIVE_KEYS:
@@ -52,16 +49,12 @@ def save_config(data):
         config['PROXMOX'] = {}
     if 'SSH' not in config:
         config['SSH'] = {}
-    if 'SCRAPER' not in config:
-        config['SCRAPER'] = {}
 
     for key, value in data.items():
         if key.startswith('PROXMOX_'):
             config['PROXMOX'][key.replace('PROXMOX_', '').lower()] = value or ''
         elif key.startswith('SSH_'):
             config['SSH'][key.replace('SSH_', '').lower()] = value or ''
-        elif key.startswith('SCRAPER_'):
-            config['SCRAPER'][key.replace('SCRAPER_', '').lower()] = value or ''
 
     with open(CONFIG_PATH, 'w') as configfile:
         config.write(configfile)

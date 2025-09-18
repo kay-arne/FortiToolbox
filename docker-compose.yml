@@ -10,5 +10,4 @@ services:
       - .env
     volumes:
       - ./temp_uploads:/app/temp_uploads
-      - ./tools/cli_finder:/app/tools/cli_finder
     restart: unless-stopped

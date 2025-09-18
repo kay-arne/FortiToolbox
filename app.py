@@ -18,8 +18,6 @@ if project_root not in sys.path:
 from tools.dashboard.views import dashboard_bp
 from tools.proxmox_importer.views import proxmox_vm_importer_bp
 from tools.config_tool.views import config_tool_bp
-from tools.cli_finder.views import cli_finder_bp
-from tools.scraper.views import scraper_bp
 
 def create_app():
     """Creates and configures the Flask application."""
@@ -32,8 +30,6 @@ def create_app():
     app.register_blueprint(dashboard_bp)
     app.register_blueprint(proxmox_vm_importer_bp)
     app.register_blueprint(config_tool_bp)
-    app.register_blueprint(cli_finder_bp)
-    app.register_blueprint(scraper_bp)
 
     return app
 
