@@ -33,40 +33,82 @@ proxmox_vm_importer_bp = Blueprint(
 @proxmox_vm_importer_bp.route('/tool/proxmox-importer')
 def proxmox_importer_tool():
     """Renders the HTML partial for the Proxmox Importer tool."""
-    proxmox_api, _, _, is_error, _ = get_cached_proxmox_api_and_ssh_data()
-    if is_error or not proxmox_api:
-        return render_template('connection_error.html', error_message=_)
-    
-    nodes_data = []
-    used_vm_ids = []
-    storage_locations_names = []
+    # Check if we have a valid configuration first
     try:
-        nodes_list = proxmox_api.nodes.get()
-        vms = proxmox_api.cluster.resources.get(type='vm')
-        used_vm_ids = sorted([vm['vmid'] for vm in vms])
-        temp_storage_locations = []
-        for node in nodes_list:
-            node_name = node['node']
-            try:
-                node_storages = proxmox_api.nodes(node_name).storage.get()
-                for s in node_storages:
-                    if 'content' in s and ('images' in s['content'].split(',') or 'rootdir' in s['content'].split(',')):
-                        if s['storage'] not in [item['storage'] for item in temp_storage_locations]:
-                            temp_storage_locations.append({'storage': s['storage'], 'type': s['type']})
-            except Exception as e:
-                print(f"[{__name__}] Warning: Could not retrieve storage locations from node '{node_name}': {e}")
-        storage_locations_names = sorted([s['storage'] for s in temp_storage_locations])
-        nodes_data = [node['node'] for node in nodes_list]
-    except Exception as e:
-        print(f"[{__name__}] ERROR retrieving Proxmox data: {e}")
-        return render_template('connection_error.html', error_message=str(e))
+        from config_manager import load_config
+        config = load_config()
+        
+        # Check if required Proxmox settings are present
+        required_settings = ['PROXMOX_HOST', 'PROXMOX_USER', 'PROXMOX_TOKEN_NAME', 'PROXMOX_TOKEN_VALUE']
+        missing_settings = [setting for setting in required_settings if not config.get(setting)]
+        
+        if missing_settings:
+            return render_template(
+                'proxmox_importer.html',
+                nodes=[],
+                used_vm_ids=[],
+                storage_locations=[],
+                connection_error=f"Proxmox configuration incomplete. Missing: {', '.join(missing_settings)}. Please configure these settings in the Configuration tool."
+            )
+        
+        # Try to get connection data
+        proxmox_api, _, _, is_error, error_message = get_cached_proxmox_api_and_ssh_data()
+        if is_error or not proxmox_api:
+            return render_template(
+                'proxmox_importer.html',
+                nodes=[],
+                used_vm_ids=[],
+                storage_locations=[],
+                connection_error=error_message or "Proxmox connection failed. Please check your configuration."
+            )
+        
+        # If we get here, connection is working - get the data
+        nodes_data = []
+        used_vm_ids = []
+        storage_locations_names = []
+        
+        try:
+            nodes_list = proxmox_api.nodes.get()
+            vms = proxmox_api.cluster.resources.get(type='vm')
+            used_vm_ids = sorted([vm['vmid'] for vm in vms])
+            temp_storage_locations = []
+            for node in nodes_list:
+                node_name = node['node']
+                try:
+                    node_storages = proxmox_api.nodes(node_name).storage.get()
+                    for s in node_storages:
+                        if 'content' in s and ('images' in s['content'].split(',') or 'rootdir' in s['content'].split(',')):
+                            if s['storage'] not in [item['storage'] for item in temp_storage_locations]:
+                                temp_storage_locations.append({'storage': s['storage'], 'type': s['type']})
+                except Exception as e:
+                    print(f"[{__name__}] Warning: Could not retrieve storage locations from node '{node_name}': {e}")
+            storage_locations_names = sorted([s['storage'] for s in temp_storage_locations])
+            nodes_data = [node['node'] for node in nodes_list]
+        except Exception as e:
+            print(f"[{__name__}] ERROR retrieving Proxmox data: {e}")
+            return render_template(
+                'proxmox_importer.html',
+                nodes=[],
+                used_vm_ids=[],
+                storage_locations=[],
+                connection_error=f"Failed to retrieve Proxmox data: {str(e)}"
+            )
 
-    return render_template(
-        'proxmox_importer.html',
-        nodes=nodes_data,
-        used_vm_ids=used_vm_ids,
-        storage_locations=storage_locations_names
-    )
+        return render_template(
+            'proxmox_importer.html',
+            nodes=nodes_data,
+            used_vm_ids=used_vm_ids,
+            storage_locations=storage_locations_names
+        )
+        
+    except Exception as e:
+        return render_template(
+            'proxmox_importer.html',
+            nodes=[],
+            used_vm_ids=[],
+            storage_locations=[],
+            connection_error=f"Configuration error: {str(e)}"
+        )
 
 @proxmox_vm_importer_bp.route('/upload-and-extract-zip', methods=['POST'])
 def upload_and_extract_zip():
