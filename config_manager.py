@@ -27,6 +27,12 @@ def load_config():
         if 'SSH' in config:
             for key in config['SSH']:
                 settings[f"SSH_{key.upper()}"] = config.get('SSH', key)
+    else:
+        # If config.ini doesn't exist, create an empty one with default structure
+        config['PROXMOX'] = {}
+        config['SSH'] = {}
+        with open(CONFIG_PATH, 'w') as configfile:
+            config.write(configfile)
 
     # 2. Override with environment variables if present
     for key in SENSITIVE_KEYS:
