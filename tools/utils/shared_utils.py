@@ -15,8 +15,12 @@ urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 progress_queues = {}
 def log_progress(session_id, message):
     """Logs a message to the correct session's progress queue."""
-    if session_id in progress_queues:
-        progress_queues[session_id].put(message)
+    # Ensure queue exists for this session
+    if session_id not in progress_queues:
+        progress_queues[session_id] = queue.Queue()
+    
+    # Add message to queue
+    progress_queues[session_id].put(message)
     print(f"[{session_id}] {message}")
 
 

@@ -197,24 +197,25 @@ def finalize_vm_import():
 @proxmox_vm_importer_bp.route('/progress/<int:session_id>')
 def progress(session_id):
     def generate():
-        # Initialize queue if it doesn't exist
+        # Ensure queue exists
         if session_id not in progress_queues:
             progress_queues[session_id] = queue.Queue()
+            yield f"data: 🔄 Initializing progress tracking...\n\n"
         
-        q = progress_queues.get(session_id)
-        if not q: 
-            yield f"data: ❌ Error receiving progress updates. The connection may have been lost.\n\n"
-            return
-            
+        q = progress_queues[session_id]
+        
+        # Send a test message immediately
+        yield f"data: 📡 Progress connection established for session {session_id}\n\n"
+        
         while True:
             try:
-                message = q.get(timeout=60)
+                message = q.get(timeout=30)
                 yield f"data: {message}\n\n"
                 if "✅ Import completed successfully!" in message or "❌" in message:
                     break
             except queue.Empty:
-                yield f"data: ❌ Error receiving progress updates. The connection may have been lost.\n\n"
-                break
+                yield f"data: ⏳ Waiting for progress updates...\n\n"
+                continue
             except Exception as e:
                 yield f"data: ❌ Error: {str(e)}\n\n"
                 break
