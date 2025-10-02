@@ -33,8 +33,10 @@ def create_app():
 
     return app
 
+# Create the app instance for gunicorn
+app = create_app()
+
 if __name__ == '__main__':
-    app = create_app()
     # For production, it's recommended to use a proper WSGI server like Gunicorn
     # The debug flag is now turned off for safety.
     app.run(debug=False, port=5001)
