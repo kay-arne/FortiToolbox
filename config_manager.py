@@ -1,7 +1,7 @@
 import configparser
 import os
 
-CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config.ini')
+CONFIG_PATH = os.path.join(os.path.dirname(__file__), 'config', 'config.ini')
 
 # Define which keys are considered sensitive and should be prioritized from environment variables.
 SENSITIVE_KEYS = [
@@ -29,6 +29,9 @@ def load_config():
                 settings[f"SSH_{key.upper()}"] = config.get('SSH', key)
     else:
         # If config.ini doesn't exist, create an empty one with default structure
+        # Ensure the config directory exists
+        config_dir = os.path.dirname(CONFIG_PATH)
+        os.makedirs(config_dir, exist_ok=True)
         config['PROXMOX'] = {}
         config['SSH'] = {}
         with open(CONFIG_PATH, 'w') as configfile:
@@ -62,5 +65,9 @@ def save_config(data):
         elif key.startswith('SSH_'):
             config['SSH'][key.replace('SSH_', '').lower()] = value or ''
 
+    # Ensure the config directory exists
+    config_dir = os.path.dirname(CONFIG_PATH)
+    os.makedirs(config_dir, exist_ok=True)
+    
     with open(CONFIG_PATH, 'w') as configfile:
         config.write(configfile)

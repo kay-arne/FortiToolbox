@@ -9,5 +9,5 @@ services:
     env_file:
       - .env
     volumes:
-      - ./config.ini:/app/config.ini
+      - ./config:/app/config
     restart: unless-stopped
