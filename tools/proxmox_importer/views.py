@@ -182,6 +182,13 @@ def finalize_vm_import():
         log_progress(session_id, "❌ ERROR: Session has expired or the ZIP path could not be found. Please start over.")
         return jsonify({"success": False, "error": "Session expired"})
 
+    # Initialize progress queue for this session
+    if session_id not in progress_queues:
+        progress_queues[session_id] = queue.Queue()
+    
+    # Send initial progress message
+    log_progress(session_id, "🚀 Starting VM import process...")
+    
     thread = Thread(target=_perform_full_vm_import_task, args=(session_id, vm_data_json, local_zip_file_path))
     thread.start()
 
@@ -190,8 +197,15 @@ def finalize_vm_import():
 @proxmox_vm_importer_bp.route('/progress/<int:session_id>')
 def progress(session_id):
     def generate():
+        # Initialize queue if it doesn't exist
+        if session_id not in progress_queues:
+            progress_queues[session_id] = queue.Queue()
+        
         q = progress_queues.get(session_id)
-        if not q: return
+        if not q: 
+            yield f"data: ❌ Error receiving progress updates. The connection may have been lost.\n\n"
+            return
+            
         while True:
             try:
                 message = q.get(timeout=60)
@@ -199,8 +213,20 @@ def progress(session_id):
                 if "✅ Import completed successfully!" in message or "❌" in message:
                     break
             except queue.Empty:
+                yield f"data: ❌ Error receiving progress updates. The connection may have been lost.\n\n"
                 break
-    return Response(generate(), mimetype='text/event-stream')
+            except Exception as e:
+                yield f"data: ❌ Error: {str(e)}\n\n"
+                break
+                
+    return Response(generate(), 
+                   mimetype='text/event-stream',
+                   headers={
+                       'Cache-Control': 'no-cache',
+                       'Connection': 'keep-alive',
+                       'Access-Control-Allow-Origin': '*',
+                       'Access-Control-Allow-Headers': 'Cache-Control'
+                   })
 
 def _perform_full_vm_import_task(session_id, vm_data, local_zip_file_path):
     """The full import task that runs in a separate thread."""
