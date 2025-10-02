@@ -7,21 +7,47 @@ import socket
 import queue
 import urllib3
 import os
+import json
+import threading
 
 from config_manager import load_config
 
 urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
 
 progress_queues = {}
+progress_lock = threading.Lock()
+
 def log_progress(session_id, message):
     """Logs a message to the correct session's progress queue."""
-    # Ensure queue exists for this session
-    if session_id not in progress_queues:
-        progress_queues[session_id] = queue.Queue()
+    with progress_lock:
+        # Ensure queue exists for this session
+        if session_id not in progress_queues:
+            progress_queues[session_id] = queue.Queue()
+        
+        # Add message to queue
+        progress_queues[session_id].put(message)
+        
+        # Also write to a file for cross-worker communication
+        progress_file = f"/tmp/progress_{session_id}.log"
+        with open(progress_file, "a") as f:
+            f.write(f"{message}\n")
+        
+        print(f"[{session_id}] {message}")
+
+def get_progress_messages(session_id, last_position=0):
+    """Get progress messages from file for cross-worker communication."""
+    progress_file = f"/tmp/progress_{session_id}.log"
+    if not os.path.exists(progress_file):
+        return [], 0
     
-    # Add message to queue
-    progress_queues[session_id].put(message)
-    print(f"[{session_id}] {message}")
+    try:
+        with open(progress_file, "r") as f:
+            lines = f.readlines()
+        
+        new_messages = lines[last_position:]
+        return new_messages, len(lines)
+    except:
+        return [], 0
 
 
 _cache = {}

@@ -197,25 +197,31 @@ def finalize_vm_import():
 @proxmox_vm_importer_bp.route('/progress/<int:session_id>')
 def progress(session_id):
     def generate():
-        # Ensure queue exists
-        if session_id not in progress_queues:
-            progress_queues[session_id] = queue.Queue()
-            yield f"data: 🔄 Initializing progress tracking...\n\n"
+        from tools.utils.shared_utils import get_progress_messages
         
-        q = progress_queues[session_id]
-        
-        # Send a test message immediately
+        # Send initial connection message
         yield f"data: 📡 Progress connection established for session {session_id}\n\n"
         
+        last_position = 0
         while True:
             try:
-                message = q.get(timeout=30)
-                yield f"data: {message}\n\n"
-                if "✅ Import completed successfully!" in message or "❌" in message:
-                    break
-            except queue.Empty:
-                yield f"data: ⏳ Waiting for progress updates...\n\n"
-                continue
+                # Get new messages from file
+                messages, new_position = get_progress_messages(session_id, last_position)
+                last_position = new_position
+                
+                if messages:
+                    for message in messages:
+                        message = message.strip()
+                        if message:
+                            yield f"data: {message}\n\n"
+                            if "✅ Import completed successfully!" in message or "❌" in message:
+                                return
+                else:
+                    yield f"data: ⏳ Waiting for progress updates...\n\n"
+                
+                import time
+                time.sleep(1)  # Check every second
+                
             except Exception as e:
                 yield f"data: ❌ Error: {str(e)}\n\n"
                 break

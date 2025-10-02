@@ -25,4 +25,4 @@ EXPOSE 5001
 ENV FLASK_APP app.py
 
 # Run app.py when the container launches
-CMD ["gunicorn", "--workers", "3", "--bind", "0.0.0.0:5001", "app:app"]
+CMD ["gunicorn", "--workers", "3", "--bind", "0.0.0.0:5001", "--timeout", "300", "--keep-alive", "5", "app:app"]
