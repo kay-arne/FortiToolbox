@@ -10,4 +10,5 @@ services:
       - .env
     volumes:
       - ./temp_uploads:/app/temp_uploads
+      - ./config.ini:/app/config.ini
     restart: unless-stopped
