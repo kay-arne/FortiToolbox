@@ -64,7 +64,8 @@ def get_ssh_client(config):
 
     ssh_client = paramiko.SSHClient()
     ssh_client.load_system_host_keys()
-    ssh_client.set_missing_host_key_policy(paramiko.RejectPolicy())
+    # Use AutoAddPolicy for Docker compatibility - automatically accept unknown host keys
+    ssh_client.set_missing_host_key_policy(paramiko.AutoAddPolicy())
 
     if auth_method == 'password':
         ssh_password = config.get('SSH_PASSWORD')
