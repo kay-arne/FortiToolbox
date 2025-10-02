@@ -49,7 +49,10 @@ FortiToolbox is a production-ready, Docker-based web application for network eng
 
 3.  **Deploy with Docker Compose:**
     ```bash
-    # Start the application
+    # Build and start the application (first time)
+    docker compose up --build -d
+
+    # Or if already built, just start
     docker compose up -d
 
     # View logs
@@ -84,6 +87,21 @@ docker compose logs -f fortitoolbox
 
 # Check resource usage
 docker stats fortitoolbox
+```
+
+### 🔄 Updates and Rebuilds
+
+```bash
+# Pull latest changes and rebuild
+git pull origin main
+docker compose up --build -d
+
+# Force rebuild (if needed)
+docker compose build --no-cache
+docker compose up -d
+
+# Update specific service
+docker compose up --build -d fortitoolbox
 ```
 
 ## 🔧 Configuration
